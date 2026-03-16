@@ -28,24 +28,11 @@ def create_model_directories():
             print(f"Created directory: {full_path}")
 
 def create_sample_models():
-    """Create sample model files for demonstration."""
-    models_dir = os.path.join(os.path.dirname(__file__), "models")
-    
-    # Create a simple message classifier model
-    message_model_path = os.path.join(models_dir, "message_model.pkl")
-    if not os.path.exists(message_model_path):
-        with open(message_model_path, "w") as f:
-            f.write("# Sample message classifier model\n")
-            f.write("# In a real implementation, this would be a trained scikit-learn model\n")
-        print(f"Created sample message model: {message_model_path}")
-    
-    # Create a simple URL classifier model
-    url_model_path = os.path.join(models_dir, "url_model.pkl")
-    if not os.path.exists(url_model_path):
-        with open(url_model_path, "w") as f:
-            f.write("# Sample URL classifier model\n")
-            f.write("# In a real implementation, this would be a trained scikit-learn model\n")
-        print(f"Created sample URL model: {url_model_path}")
+    """Train model files with real data."""
+    print("Training models with real data...")
+    import subprocess
+    train_script = os.path.join(os.path.dirname(__file__), "train_models.py")
+    subprocess.run([sys.executable, train_script])
 
 def setup_database():
     """Set up the PostgreSQL database."""

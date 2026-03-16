@@ -12,25 +12,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     // Show warning banner on page
     showWarningBanner(request.message);
     sendResponse({status: 'banner shown'});
-  } else if (request.action === 'syncAuth') {
-    syncAuth();
-    sendResponse({status: 'sync started'});
   }
   
   return true; // Keep message channel open for async response
 });
-
-function syncAuth() {
-  const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
-  if (token && user) {
-    chrome.runtime.sendMessage({
-      action: 'saveAuth',
-      token: token,
-      user: JSON.parse(user)
-    });
-  }
-}
 
 function showWarningBanner(message) {
   // Check if banner already exists
@@ -89,85 +74,9 @@ function showWarningBanner(message) {
 
 // Auto-scan page on load
 window.addEventListener('load', function() {
-  console.log('Safety Assistant: Page loaded - ready for scanning');
-  
-  // Track site visit for behavior analysis
-  trackSiteVisit();
-
-  // Sync auth if on the app domain
-  if (window.location.href.includes('localhost:3000')) {
-    syncAuth();
-  }
-  
-  // Gmail Scanner
-  if (window.location.hostname.includes('mail.google.com')) {
-    observeGmail();
-  }
-  
-  // WhatsApp Scanner
-  if (window.location.hostname.includes('web.whatsapp.com')) {
-    observeWhatsApp();
-  }
-});
-
-function trackSiteVisit() {
-  const sensitiveDomains = ["binance.com", "coinbase.com", "metamask.io", "paypal.com", "bankofamerica.com"];
-  const domain = window.location.hostname;
-  const isSensitive = sensitiveDomains.some(d => domain.includes(d));
-
+  console.log('Safety Assistant: Page loaded - auto-scanning');
   chrome.runtime.sendMessage({
-    action: 'trackActivity',
-    type: 'site_visit',
-    metadata: {
-      domain: domain,
-      url: window.location.href,
-      is_sensitive: isSensitive
-    }
+    action: 'analyzeUrl',
+    url: window.location.href
   });
-}
-
-function observeGmail() {
-  const observer = new MutationObserver((mutations) => {
-    for (let mutation of mutations) {
-      if (mutation.addedNodes.length) {
-        // Look for email body containers
-        const emailBodies = document.querySelectorAll('.a3s.aiL:not([data-scanned])');
-        emailBodies.forEach(body => {
-          body.setAttribute('data-scanned', 'true');
-          const text = body.innerText;
-          if (text.length > 10) {
-            chrome.runtime.sendMessage({
-              action: 'analyzeContent',
-              content: text,
-              type: 'message'
-            });
-          }
-        });
-      }
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-}
-
-function observeWhatsApp() {
-  const observer = new MutationObserver((mutations) => {
-    for (let mutation of mutations) {
-      if (mutation.addedNodes.length) {
-        // Look for message bubbles
-        const messages = document.querySelectorAll('.copyable-text:not([data-scanned])');
-        messages.forEach(msg => {
-          msg.setAttribute('data-scanned', 'true');
-          const text = msg.innerText;
-          if (text.length > 5) {
-            chrome.runtime.sendMessage({
-              action: 'analyzeContent',
-              content: text,
-              type: 'message'
-            });
-          }
-        });
-      }
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-}
+});

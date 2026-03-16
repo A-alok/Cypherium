@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from schemas.scan import ScanRequest, ScanResult, ScanHistory, FeedbackRequest
-from utils.database import get_db_connection, save_scan_result, get_user_privacy_settings
+from utils.database import get_db_connection, save_scan_result, get_user_privacy_settings, update_user_privacy_settings
 from services.auth_service import decode_access_token
 from models.message_classifier import MessageClassifier
 from models.url_classifier import URLClassifier
