@@ -1,0 +1,53 @@
+# OS files
+.DS_Store
+Thumbs.db
+db.json
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Node.js (Frontend / Web)
+web/node_modules/
+web/build/
+web/dist/
+web/.env.local
+web/.env.development.local
+web/.env.test.local
+web/.env.production.local
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+
+# Python (Backend)
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/.env
+backend/venv/
+backend/env/
+backend/ENV/
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/.mypy_cache/
+
+# Chrome Extension
+extension/node_modules/
+extension/dist/
+extension/*.zip
+extension/.env
+
+# Local logs
+*.log
+
+# Sensitive data
+.env
+.env.local
+credential*.json
+*.pem
+*.key
