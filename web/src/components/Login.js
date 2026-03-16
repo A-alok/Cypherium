@@ -39,14 +39,8 @@ const Login = ({ onLogin, onShowRegister }) => {
         setError(errorData.detail || 'Login failed');
       }
     } catch (err) {
-      // Fallback for demo if backend is not reachable
-      console.log('Backend unreachable, using local mock');
-      setTimeout(() => {
-        onLogin({
-          username: username,
-          token: 'sample-jwt-token'
-        });
-      }, 500);
+      console.error('Login error:', err);
+      setError('Connection failed. Backend may be unreachable.');
     }
   };
 

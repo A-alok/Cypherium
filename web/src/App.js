@@ -10,14 +10,25 @@ function App() {
   const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
-    // Check if user is already logged in (from localStorage or session)
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
+    
     if (token && storedUser) {
-      // In a real app, you would verify the token with the backend
-      setIsLoggedIn(true);
-      // Set user data from token or API call
-      setUser(JSON.parse(storedUser));
+      // Verify token via backend
+      fetch(`http://localhost:8000/risk/score?token=${token}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => {
+        if (res.ok) {
+          setIsLoggedIn(true);
+          setUser(JSON.parse(storedUser));
+        } else {
+          // Token is invalid/expired
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      })
+      .catch(err => console.error('Token verification failed:', err));
     }
   }, []);
 

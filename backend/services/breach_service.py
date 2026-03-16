@@ -19,33 +19,66 @@ class BreachService:
         }
     
     def check_email_breaches(self, email: str) -> Dict[str, Any]:
-        """Check if an email has been involved in data breaches."""
-        # In a real implementation, this would call the HIBP API or similar
-        # For now, we'll use mock data
-        breaches = self.mock_breaches.get(email.lower(), [])
+        """Check if an email has been involved in data breaches using HIBP."""
+        import os
+        api_key = os.getenv('HIBP_API_KEY')
+        if not api_key:
+            return {
+                "email": email,
+                "breach_count": 0,
+                "breaches": [],
+                "risk_level": "low",
+                "status": "warning_missing_api_key_configuration"
+            }
         
-        return {
-            "email": email,
-            "breach_count": len(breaches),
-            "breaches": breaches,
-            "risk_level": self._calculate_breach_risk(len(breaches))
+        headers = {
+            'hibp-api-key': api_key,
+            'user-agent': 'SafetyAssistant'
         }
+        
+        try:
+            response = requests.get(
+                f'https://haveibeenpwned.com/api/v3/breachedaccount/{email}',
+                headers=headers
+            )
+            if response.status_code == 404:
+                return {"email": email, "breach_count": 0, "breaches": [], "risk_level": "low"}
+            response.raise_for_status()
+            
+            breaches = response.json()
+            return {
+                "email": email,
+                "breach_count": len(breaches),
+                "breaches": breaches,
+                "risk_level": self._calculate_breach_risk(len(breaches))
+            }
+        except Exception as e:
+            return {
+                "email": email,
+                "breach_count": 0,
+                "breaches": [],
+                "risk_level": "unknown",
+                "error": f"Failed to check breaches: {str(e)}"
+            }
     
     def check_password_safety(self, password: str) -> Dict[str, Any]:
         """Check password safety using k-anonymity method."""
-        # Calculate SHA-1 hash of the password
         sha1_hash = hashlib.sha1(password.encode()).hexdigest().upper()
         prefix = sha1_hash[:5]
         suffix = sha1_hash[5:]
         
-        # In a real implementation, this would call the HIBP API
-        # For simulation, we'll use mock data
-        mock_pwned_hashes = {
-            "CBFDAC": 5,  # Password "password" appears 5 times
-            "71E2F0": 3,  # Another common password
-        }
-        
-        count = mock_pwned_hashes.get(prefix[:6], 0)
+        count = 0
+        try:
+            response = requests.get(f'https://api.pwnedpasswords.com/range/{prefix}')
+            if response.status_code == 200:
+                lines = response.text.splitlines()
+                for line in lines:
+                    hash_suffix, count_str = line.split(':')
+                    if hash_suffix == suffix:
+                        count = int(count_str)
+                        break
+        except Exception:
+            pass
         
         return {
             "password_hash_prefix": prefix,

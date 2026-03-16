@@ -6,11 +6,14 @@
   "permissions": [
     "activeTab",
     "contextMenus",
-    "storage"
+    "storage",
+    "webNavigation",
+    "notifications"
   ],
   "host_permissions": [
+    "http://127.0.0.1:8000/*",
     "http://localhost:8000/*",
-    "https://your-backend-domain.com/*"
+    "https://api.cypherium.app/*"
   ],
   "action": {
     "default_popup": "popup.html",

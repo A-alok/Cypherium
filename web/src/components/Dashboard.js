@@ -23,27 +23,83 @@ ChartJS.register(
 );
 
 const Dashboard = ({ user, onLogout }) => {
-  const [riskScore, setRiskScore] = useState(45);
-  const [scanHistory, setScanHistory] = useState([
-    { id: 1, type: 'URL', content: 'https://suspicious-site.com', result: 'Malicious', date: '2023-05-15' },
-    { id: 2, type: 'Message', content: 'You\'ve won $1000!', result: 'Scam', date: '2023-05-14' },
-    { id: 3, type: 'Email', content: 'user@example.com', result: 'Safe', date: '2023-05-13' },
-  ]);
+  const [riskScore, setRiskScore] = useState(0);
+  const [scanHistory, setScanHistory] = useState([]);
   const [platformInsights, setPlatformInsights] = useState({
-    web: { scans: 8, risks: 0.2 },
-    browserExtension: { scans: 12, risks: 0.4 }
+    web: { scans: 0, risks: 0 },
+    browserExtension: { scans: 0, risks: 0 }
   });
-  const [recommendations, setRecommendations] = useState([
-    "Review your accounts for data breaches and change passwords",
-    "Be cautious when clicking links, especially in emails or messages"
-  ]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [riskFactors, setRiskFactors] = useState({
+    breachRisk: 0,
+    maliciousUrls: 0,
+    suspiciousMessages: 0,
+    passwordRisk: 0
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        
+        // Fetch Risk Score
+        const scoreRes = await fetch(`http://localhost:8000/risk/score?token=${token}`, { headers });
+        if (scoreRes.ok) {
+          const scoreData = await scoreRes.json();
+          setRiskScore(scoreData.score);
+          if (scoreData.platform_insights) {
+            setPlatformInsights({
+              web: scoreData.platform_insights.web || { scans: 0, risks: 0 },
+              browserExtension: scoreData.platform_insights.browser_extension || { scans: 0, risks: 0 }
+            });
+          }
+          if (scoreData.recommendations) {
+            setRecommendations(scoreData.recommendations);
+          }
+          if (scoreData.factors) {
+            setRiskFactors({
+              breachRisk: (scoreData.factors.breach_risk?.score || 0) * 100,
+              maliciousUrls: (scoreData.factors.malicious_urls?.score || 0) * 100,
+              suspiciousMessages: (scoreData.factors.suspicious_messages?.score || 0) * 100,
+              passwordRisk: (scoreData.factors.password_risk?.score || 0) * 100
+            });
+          }
+        }
+
+        // Fetch Scan History
+        const historyRes = await fetch(`http://localhost:8000/scan/history?token=${token}`, { headers });
+        if (historyRes.ok) {
+          const historyData = await historyRes.json();
+          const formattedHistory = historyData.map(scan => {
+            let resultText = "Unknown";
+            if (scan.result) {
+              resultText = scan.result.prediction || scan.result.safety_status || "Unknown";
+            }
+            return {
+              id: scan.id,
+              type: scan.scan_type.toUpperCase(),
+              content: scan.content,
+              result: resultText,
+              date: new Date(scan.timestamp).toLocaleDateString()
+            };
+          });
+          setScanHistory(formattedHistory);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+      }
+    };
+    
+    fetchData();
+  }, []);
 
   const riskData = {
     labels: ['Breach Risk', 'Malicious URLs', 'Suspicious Messages', 'Password Risk'],
     datasets: [
       {
         label: 'Risk Factors',
-        data: [30, 20, 60, 10],
+        data: [riskFactors.breachRisk, riskFactors.maliciousUrls, riskFactors.suspiciousMessages, riskFactors.passwordRisk],
         backgroundColor: [
           'rgba(255, 99, 132, 0.6)',
           'rgba(54, 162, 235, 0.6)',
@@ -119,7 +175,7 @@ const Dashboard = ({ user, onLogout }) => {
       <header className="dashboard-header">
         <h1>Safety Dashboard</h1>
         <div className="user-info">
-          <span>Welcome, {user?.name}</span>
+          <span>Welcome, {user?.username || user?.name}</span>
           <button onClick={onLogout} className="logout-button">Logout</button>
         </div>
       </header>

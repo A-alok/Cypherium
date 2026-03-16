@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from schemas.scan import ScanRequest, ScanResult, ScanHistory, FeedbackRequest
-from utils.database import get_db_connection, save_scan_result, get_user_privacy_settings
+from utils.database import get_db_connection, save_scan_result, get_user_privacy_settings, update_user_privacy_settings
 from services.auth_service import decode_access_token
 from models.message_classifier import MessageClassifier
 from models.url_classifier import URLClassifier
@@ -42,9 +42,7 @@ async def analyze_content(scan_request: ScanRequest, token: str = None):
         try:
             payload = decode_access_token(token)
             if payload:
-                # In a real implementation, you would get user_id from database
-                # For now, we'll use a placeholder
-                user_id = 1  # Placeholder user ID
+                user_id = payload.get("sub")
                 # Get user privacy settings
                 privacy_settings = get_user_privacy_settings(user_id)
                 if privacy_settings:
@@ -173,8 +171,7 @@ async def submit_feedback(feedback: FeedbackRequest, token: str = None):
             try:
                 payload = decode_access_token(token)
                 if payload:
-                    # In a real implementation, you would get user_id from database
-                    user_id = 1  # Placeholder user ID
+                    user_id = payload.get("sub")
             except:
                 pass
         
@@ -223,8 +220,7 @@ async def get_scan_history(token: str = None):
             try:
                 payload = decode_access_token(token)
                 if payload:
-                    # In a real implementation, you would get user_id from database
-                    user_id = 1  # Placeholder user ID
+                    user_id = payload.get("sub")
             except:
                 pass
         
@@ -270,8 +266,7 @@ async def get_privacy_settings(token: str = None):
         try:
             payload = decode_access_token(token)
             if payload:
-                # In a real implementation, you would get user_id from database
-                user_id = 1  # Placeholder user ID
+                user_id = payload.get("sub")
         except:
             pass
     
@@ -301,8 +296,7 @@ async def update_privacy_settings(settings: dict, token: str = None):
         try:
             payload = decode_access_token(token)
             if payload:
-                # In a real implementation, you would get user_id from database
-                user_id = 1  # Placeholder user ID
+                user_id = payload.get("sub")
         except:
             pass
     

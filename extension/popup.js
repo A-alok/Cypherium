@@ -114,17 +114,32 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   function submitFeedback(isCorrect, comment) {
-    // In a real implementation, you would send feedback to your backend
-    console.log('Submitting feedback:', { scanId: currentScanId, isCorrect, comment });
-    
-    // Show confirmation
-    statusDiv.textContent = 'Thank you for your feedback!';
-    statusDiv.className = 'status status-loading';
-    
-    // Hide feedback section
-    feedbackSection.style.display = 'none';
-    
-    // Clear form
-    document.getElementById('feedbackComment').value = '';
+    fetch('http://127.0.0.1:8000/scan/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        scan_id: currentScanId.toString(),
+        is_correct: isCorrect,
+        comment: comment
+      })
+    })
+    .then(response => {
+      // Show confirmation
+      statusDiv.textContent = 'Thank you for your feedback!';
+      statusDiv.className = 'status status-success';
+      
+      // Hide feedback section
+      feedbackSection.style.display = 'none';
+      
+      // Clear form
+      document.getElementById('feedbackComment').value = '';
+    })
+    .catch(error => {
+      console.error('Error submitting feedback:', error);
+      statusDiv.textContent = 'Error: Failed to submit feedback.';
+      statusDiv.className = 'status status-error';
+    });
   }
 });
