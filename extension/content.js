@@ -43,30 +43,60 @@ function showWarningBanner(message) {
   banner.id = 'safety-assistant-banner';
   banner.style.cssText = `
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background-color: #f44336;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 500px;
+    background: rgba(239, 68, 68, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
     color: white;
-    padding: 15px;
-    text-align: center;
-    z-index: 10000;
-    font-family: Arial, sans-serif;
-    font-size: 16px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    padding: 16px 24px;
+    text-align: left;
+    z-index: 999999;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    box-shadow: 0 12px 32px rgba(239, 68, 68, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    animation: slideDownBanner 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   `;
   
+  // Create animation style
+  if (!document.getElementById('safety-banner-keyframes')) {
+    const style = document.createElement('style');
+    style.id = 'safety-banner-keyframes';
+    style.textContent = `
+      @keyframes slideDownBanner {
+        from { opacity: 0; transform: translate(-50%, -20px); }
+        to { opacity: 1; transform: translate(-50%, 0); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   banner.innerHTML = `
-    <strong>SAFETY WARNING:</strong> ${message}
+    <div><strong style="font-weight: 700; letter-spacing: -0.02em;">SAFETY WARNING:</strong> <span style="opacity: 0.95">${message}</span></div>
     <button id="close-banner" style="
-      float: right;
-      background: none;
+      background: rgba(255, 255, 255, 0.2);
       border: none;
       color: white;
-      font-size: 20px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
       cursor: pointer;
-      margin-left: 10px;
-    ">&times;</button>
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    ">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style="pointer-events: none;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
   `;
   
   // Add close functionality

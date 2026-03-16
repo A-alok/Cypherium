@@ -75,3 +75,18 @@ async def get_user_risk_score(user_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to calculate risk score: {str(e)}"
         )
+
+@router.post("/chat")
+async def chat_with_ai(data: dict):
+    """Chat with the security assistant."""
+    message = data.get("message")
+    history = data.get("history", [])
+    
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+    
+    try:
+        response = risk_service.ai_service.chat(message, history)
+        return {"response": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -240,9 +240,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const scoreContainer = document.querySelector('.score-container');
     const scoreValue = document.querySelector('.score-value');
     
-    if (scoreValue) scoreValue.textContent = score + '/100';
+    if (scoreValue) {
+      scoreValue.innerHTML = score + '<span style="font-size: 1.25rem; font-weight: 600; color: var(--text-secondary)">/100</span>';
+    }
     if (scoreContainer) {
-      scoreContainer.className = 'score-container ' + 
+      scoreContainer.className = 'glass-card score-container ' + 
         (score > 70 ? 'score-low' : score > 40 ? 'score-medium' : 'score-high');
     }
   }

@@ -122,7 +122,10 @@ async def analyze_content(scan_request: ScanRequest, token: str = None):
         # Add guidance for non-safe predictions
         final_result = cast(Dict[str, Any], result)
         if final_result and final_result.get("prediction") != "safe":
-            final_result["guidance"] = incident_service.get_guidance(str(final_result.get("prediction")))
+            final_result["guidance"] = incident_service.get_guidance(
+                str(final_result.get("prediction")), 
+                scan_request.content
+            )
         else:
             final_result["guidance"] = []
         
