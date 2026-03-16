@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Register from './components/Register';
+import LandingPage from './components/LandingPage';
 import './App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
-  const [showRegister, setShowRegister] = useState(false);
+  const [view, setView] = useState('landing'); // 'landing', 'login', 'register'
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -49,7 +50,15 @@ function App() {
   };
 
   const toggleAuthMode = () => {
-    setShowRegister(!showRegister);
+    setView(view === 'login' ? 'register' : 'login');
+  };
+
+  const showLanding = () => {
+    setView('landing');
+  };
+
+  const showLogin = () => {
+    setView('login');
   };
 
   return (
@@ -76,7 +85,9 @@ function App() {
       <div style={{ position: 'relative', zIndex: 1, height: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
         {isLoggedIn ? (
           <Dashboard user={user} onLogout={handleLogout} />
-        ) : showRegister ? (
+        ) : view === 'landing' ? (
+          <LandingPage onGetStarted={showLogin} />
+        ) : view === 'register' ? (
           <Register onRegister={handleLogin} onBackToLogin={toggleAuthMode} />
         ) : (
           <Login onLogin={handleLogin} onShowRegister={toggleAuthMode} />
