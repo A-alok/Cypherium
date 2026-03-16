@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from typing import List
+from typing import List, Dict, Any, Optional, cast
 import json
 import sys
 import os
@@ -13,6 +13,8 @@ from services.auth_service import decode_access_token
 from models.message_classifier import MessageClassifier
 from models.url_classifier import URLClassifier
 from services.breach_service import BreachService
+from services.incident_service import IncidentService
+from services.reputation_service import ReputationService
 
 router = APIRouter(prefix="/scan", tags=["Scanning"])
 
@@ -20,6 +22,8 @@ router = APIRouter(prefix="/scan", tags=["Scanning"])
 message_model = MessageClassifier()
 url_model = URLClassifier()
 breach_service = BreachService()
+incident_service = IncidentService()
+reputation_service = ReputationService()
 
 def get_current_user(token: str):
     """Get current user from token."""
@@ -42,9 +46,8 @@ async def analyze_content(scan_request: ScanRequest, token: str = None):
         try:
             payload = decode_access_token(token)
             if payload:
-                # In a real implementation, you would get user_id from database
-                # For now, we'll use a placeholder
-                user_id = 1  # Placeholder user ID
+                # Get user identity from token
+                user_id = payload.get("sub")
                 # Get user privacy settings
                 privacy_settings = get_user_privacy_settings(user_id)
                 if privacy_settings:
@@ -68,16 +71,24 @@ async def analyze_content(scan_request: ScanRequest, token: str = None):
                 "risk_score": _calculate_message_risk_score(prediction)
             }
             
-        elif scan_request.scan_type == "url":
             # Analyze URL for malicious content
             prediction = url_model.predict(scan_request.content)
             explanation = url_model.explain_prediction(scan_request.content)
             
+            # Add reputation check
+            reputation = reputation_service.check_url_reputation(scan_request.content)
+            
+            # Combine signals
+            combined_prediction = prediction["prediction"]
+            if reputation.get("is_malicious"):
+                combined_prediction = "malicious"
+                prediction["confidence"] = 1.0
+            
             result = {
-                "prediction": prediction["prediction"],
+                "prediction": combined_prediction,
                 "confidence": prediction["confidence"],
-                "details": explanation,
-                "risk_score": _calculate_url_risk_score(prediction)
+                "details": {**explanation, "reputation": reputation},
+                "risk_score": _calculate_url_risk_score(prediction) if not reputation.get("is_malicious") else 100.0
             }
             
         elif scan_request.scan_type == "email":
@@ -108,16 +119,23 @@ async def analyze_content(scan_request: ScanRequest, token: str = None):
                 detail=f"Unsupported scan type: {scan_request.scan_type}"
             )
         
+        # Add guidance for non-safe predictions
+        final_result = cast(Dict[str, Any], result)
+        if final_result and final_result.get("prediction") != "safe":
+            final_result["guidance"] = incident_service.get_guidance(str(final_result.get("prediction")))
+        else:
+            final_result["guidance"] = []
+        
         # Save scan result to database (if user is authenticated)
         if user_id:
             try:
-                scan_id = save_scan_result(user_id, scan_request.scan_type, scan_request.content, result, privacy_mode)
+                scan_id = save_scan_result(user_id, scan_request.scan_type, scan_request.content, final_result, privacy_mode)
                 # Add scan_id to result for feedback purposes
-                result["scan_id"] = scan_id
+                final_result["scan_id"] = scan_id
             except Exception as e:
                 print(f"Warning: Could not save scan result: {e}")
         
-        return ScanResult(**result)
+        return ScanResult(**final_result)
     
     except Exception as e:
         raise HTTPException(
@@ -159,7 +177,7 @@ def _calculate_password_risk_score(password_result: dict) -> float:
 async def submit_feedback(feedback: FeedbackRequest, token: str = None):
     """Submit feedback for a scan result to improve the model."""
     db = get_db_connection()
-    if not db:
+    if db is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database connection failed"
@@ -173,8 +191,8 @@ async def submit_feedback(feedback: FeedbackRequest, token: str = None):
             try:
                 payload = decode_access_token(token)
                 if payload:
-                    # In a real implementation, you would get user_id from database
-                    user_id = 1  # Placeholder user ID
+                    # Get user identity from token
+                    user_id = payload.get("sub")
             except:
                 pass
         
@@ -209,7 +227,7 @@ async def submit_feedback(feedback: FeedbackRequest, token: str = None):
 async def get_scan_history(token: str = None):
     """Get scan history for the current user."""
     db = get_db_connection()
-    if not db:
+    if db is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database connection failed"
@@ -223,8 +241,8 @@ async def get_scan_history(token: str = None):
             try:
                 payload = decode_access_token(token)
                 if payload:
-                    # In a real implementation, you would get user_id from database
-                    user_id = 1  # Placeholder user ID
+                    # Get user identity from token
+                    user_id = payload.get("sub")
             except:
                 pass
         
@@ -270,8 +288,8 @@ async def get_privacy_settings(token: str = None):
         try:
             payload = decode_access_token(token)
             if payload:
-                # In a real implementation, you would get user_id from database
-                user_id = 1  # Placeholder user ID
+                # Get user identity from token
+                user_id = payload.get("sub")
         except:
             pass
     
@@ -301,8 +319,8 @@ async def update_privacy_settings(settings: dict, token: str = None):
         try:
             payload = decode_access_token(token)
             if payload:
-                # In a real implementation, you would get user_id from database
-                user_id = 1  # Placeholder user ID
+                # Get user identity from token
+                user_id = payload.get("sub")
         except:
             pass
     

@@ -34,7 +34,7 @@ async def register_user(user: UserCreate):
         )
 
     db = get_db_connection()
-    if not db:
+    if db is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database connection failed"
@@ -93,7 +93,7 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends()):
         return Token(access_token=access_token, token_type="bearer")
 
     db = get_db_connection()
-    if not db:
+    if db is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database connection failed"

@@ -10,7 +10,7 @@ load_dotenv()
 # Add the current directory to the path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from routes import auth_routes, scan_routes, risk_routes
+from routes import auth_routes, scan_routes, risk_routes, behavior_routes
 
 app = FastAPI(
     title="AI-Powered Personal Digital Safety Assistant",
@@ -36,6 +36,7 @@ app.add_middleware(
 app.include_router(auth_routes.router)
 app.include_router(scan_routes.router)
 app.include_router(risk_routes.router)
+app.include_router(behavior_routes.router)
 
 @app.get("/")
 async def root():

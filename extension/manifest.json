@@ -6,7 +6,9 @@
   "permissions": [
     "activeTab",
     "contextMenus",
-    "storage"
+    "storage",
+    "notifications",
+    "webNavigation"
   ],
   "host_permissions": [
     "http://localhost:8000/*",

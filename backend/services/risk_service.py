@@ -78,62 +78,77 @@ class RiskService:
         return list(cursor)
     
     def _calculate_breach_risk(self, user_id, db) -> float:
-        """Calculate breach risk factor."""
-        breach_count = db.scan_history.count_documents({
+        """Calculate breach risk factor based on total leak count across all email scans."""
+        scans = db.scan_history.find({
             "user_id": str(user_id),
             "scan_type": "email"
         })
         
-        # Normalize to 0-1 scale (assuming max 10 breaches is high risk)
-        return min(breach_count / 10.0, 1.0)
+        total_breaches = 0
+        for scan in scans:
+            result = scan.get('result', {})
+            total_breaches += result.get('breach_count', 0)
+        
+        # Normalize: 0 breaches = 0, 5+ breaches = 1.0 (Critical)
+        return min(total_breaches / 5.0, 1.0)
     
     def _calculate_url_risk(self, scan_history: List[Dict]) -> float:
-        """Calculate URL risk factor based on malicious URL detections."""
+        """Calculate URL risk factor based on severity of detections."""
         url_scans = [scan for scan in scan_history if scan['scan_type'] == 'url']
         
         if not url_scans:
             return 0.0
         
-        malicious_count = 0
+        risk_sum = 0
         for scan in url_scans:
             result = scan.get('result', {})
-            if isinstance(result, dict) and result.get('prediction') in ['malicious', 'scam']:
-                malicious_count += 1
+            pred = result.get('prediction', 'safe')
+            if pred == 'malicious':
+                risk_sum += 1.0
+            elif pred == 'suspicious':
+                risk_sum += 0.5
+            elif pred == 'scam':
+                risk_sum += 0.8
         
-        # Normalize to 0-1 scale (assuming max 5 malicious URLs is high risk)
-        return min(malicious_count / 5.0, 1.0)
+        # Max out risk if we see 2 malicious or 4 suspicious URLs
+        return min(risk_sum / 2.0, 1.0)
     
     def _calculate_message_risk(self, scan_history: List[Dict]) -> float:
-        """Calculate message risk factor based on suspicious message detections."""
+        """Calculate message risk factor based on severity of detections."""
         message_scans = [scan for scan in scan_history if scan['scan_type'] == 'message']
         
         if not message_scans:
             return 0.0
         
-        suspicious_count = 0
+        risk_sum = 0
         for scan in message_scans:
             result = scan.get('result', {})
-            if isinstance(result, dict) and result.get('prediction') in ['suspicious', 'scam']:
-                suspicious_count += 1
+            pred = result.get('prediction', 'safe')
+            if pred == 'scam':
+                risk_sum += 1.0
+            elif pred == 'suspicious':
+                risk_sum += 0.5
         
-        # Normalize to 0-1 scale (assuming max 10 suspicious messages is high risk)
-        return min(suspicious_count / 10.0, 1.0)
+        # Max out risk if we see 2 scams or 4 suspicious messages
+        return min(risk_sum / 2.0, 1.0)
     
     def _calculate_password_risk(self, scan_history: List[Dict]) -> float:
-        """Calculate password risk factor based on compromised password detections."""
+        """Calculate password risk factor based on compromised count."""
         password_scans = [scan for scan in scan_history if scan['scan_type'] == 'password']
         
         if not password_scans:
             return 0.0
         
-        compromised_count = 0
+        max_compromise = 0
         for scan in password_scans:
             result = scan.get('result', {})
-            if isinstance(result, dict) and result.get('safety_status') == 'compromised':
-                compromised_count += 1
+            if result.get('safety_status') == 'compromised':
+                # Higher count = higher risk
+                count = result.get('compromised_count', 0)
+                risk = 1.0 if count > 1000 else 0.5
+                max_compromise = max(max_compromise, risk)
         
-        # Normalize to 0-1 scale (assuming max 3 compromised passwords is high risk)
-        return min(compromised_count / 3.0, 1.0)
+        return float(max_compromise)
     
     def _determine_status(self, risk_score: float) -> str:
         """Determine risk status based on score."""

@@ -5,17 +5,19 @@ from datetime import datetime
 class ScanRequest(BaseModel):
     content: str
     scan_type: str  # "message", "url", "email", "password"
+    token: Optional[str] = None
 
 class ScanResult(BaseModel):
     prediction: str  # "safe", "suspicious", "scam"
     confidence: float
     details: Dict[str, Any]
     risk_score: float
-    scan_id: Optional[int] = None
+    scan_id: Optional[str] = None
+    guidance: Optional[List[str]] = None
 
 class ScanHistory(BaseModel):
-    id: int
-    user_id: int
+    id: str
+    user_id: str
     scan_type: str
     content: str
     result: ScanResult
