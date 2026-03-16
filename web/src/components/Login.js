@@ -5,19 +5,21 @@ const Login = ({ onLogin, onShowRegister }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // Basic validation
     if (!username || !password) {
       setError('Please enter both username and password');
+      setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch('http://localhost:8000/auth/login/track', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -32,7 +34,8 @@ const Login = ({ onLogin, onShowRegister }) => {
         const data = await response.json();
         onLogin({
           username: username,
-          token: data.access_token
+          token: data.access_token,
+          behavior: data.behavior
         });
       } else {
         const errorData = await response.json();
@@ -41,13 +44,18 @@ const Login = ({ onLogin, onShowRegister }) => {
     } catch (err) {
       console.error('Login error:', err);
       setError('Connection failed. Backend may be unreachable.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-container">
       <div className="login-form">
-        <h2>Safety Assistant Login</h2>
+        <div className="form-header-box">
+          <h2>Cypherium</h2>
+          <p className="subtitle">AI Cybersecurity Coach</p>
+        </div>
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -70,10 +78,12 @@ const Login = ({ onLogin, onShowRegister }) => {
               required
             />
           </div>
-          <button type="submit" className="login-button">Login</button>
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? 'Authenticating...' : 'Sign In'}
+          </button>
         </form>
         <div className="login-footer">
-          Don't have an account? <button onClick={onShowRegister} className="link-button">Register here</button>
+          Don't have an account? <button onClick={onShowRegister} className="link-button">Register</button>
         </div>
       </div>
     </div>
