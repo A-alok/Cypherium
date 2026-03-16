@@ -28,35 +28,42 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 });
 
 function analyzeLink(url) {
-  // In a real implementation, you would send this to your backend API
-  // For demo purposes, we'll simulate a response and show a notification
-  
   console.log('Analyzing URL:', url);
   
-  // Simulate API call delay
-  setTimeout(() => {
-    // Simulate response
-    const isSafe = Math.random() > 0.2; // 80% chance of being safe
+  fetch('http://127.0.0.1:8000/scan/analyze', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      scan_type: 'url',
+      content: url
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    const isSafe = data.prediction === 'safe';
     
-    // Show notification
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon48.png',
       title: 'Safety Assistant',
       message: isSafe 
         ? `This link appears to be safe: ${url}` 
-        : `Warning: This link may be unsafe: ${url}`,
+        : `Warning: This link may be ${data.prediction} (Confidence: ${(data.confidence*100).toFixed(0)}%): ${url}`,
       priority: 2
     });
     
-    // If unsafe, send message to content script to show warning
-    if (!isSafe && sender.tab) {
+    if (!isSafe && typeof sender !== 'undefined' && sender.tab) {
       chrome.tabs.sendMessage(sender.tab.id, {
         action: 'showWarning',
-        message: 'A link on this page has been flagged as potentially unsafe.'
+        message: `A link on this page has been flagged as ${data.prediction}.`
       });
     }
-  }, 1000);
+  })
+  .catch(error => {
+    console.error('Error analyzing URL:', error);
+  });
 }
 
 // Auto-scan URLs as they are visited

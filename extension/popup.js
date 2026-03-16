@@ -38,13 +38,20 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   function analyzeUrl(url) {
-    // In a real implementation, you would send this to your backend API
-    // For demo purposes, we'll simulate a response
-    
-    setTimeout(() => {
-      // Simulate API response
-      const isSafe = Math.random() > 0.3; // 70% chance of being safe
-      const newScore = isSafe ? Math.floor(Math.random() * 30) + 70 : Math.floor(Math.random() * 40) + 10;
+    fetch('http://127.0.0.1:8000/scan/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        scan_type: 'url',
+        content: url
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      const isSafe = data.prediction === 'safe';
+      const newScore = Math.floor(100 - (data.risk_score || 0));
       
       // Save to storage
       chrome.storage.local.set({safetyScore: newScore});
@@ -54,25 +61,30 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (isSafe) {
         statusDiv.textContent = 'Page is safe!';
-        statusDiv.className = 'status status-loading';
+        statusDiv.className = 'status status-success'; // Using generic safe status style
         feedbackSection.style.display = 'none';
       } else {
-        statusDiv.textContent = 'Warning: Potentially unsafe page detected!';
+        statusDiv.textContent = `Warning: ${data.prediction} page detected!`;
         statusDiv.className = 'status status-error';
         
         // Show warning banner on page
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
           chrome.tabs.sendMessage(tabs[0].id, {
             action: 'showWarning',
-            message: 'This page has been flagged as potentially unsafe.'
+            message: `This page has been flagged as ${data.prediction}.`
           });
         });
         
         // Show feedback section
         feedbackSection.style.display = 'block';
-        currentScanId = Math.floor(Math.random() * 10000); // Simulate scan ID
+        currentScanId = data.scan_id || Math.floor(Math.random() * 10000);
       }
-    }, 1500);
+    })
+    .catch(error => {
+      statusDiv.textContent = 'Error: Analysis failed.';
+      statusDiv.className = 'status status-error';
+      console.error(error);
+    });
   }
   
   function updateScoreDisplay(score) {

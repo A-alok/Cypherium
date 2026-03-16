@@ -74,7 +74,9 @@ function showWarningBanner(message) {
 
 // Auto-scan page on load
 window.addEventListener('load', function() {
-  // In a real implementation, you would check if auto-scan is enabled
-  // and then send the current URL to your backend for analysis
-  console.log('Safety Assistant: Page loaded - ready for scanning');
+  console.log('Safety Assistant: Page loaded - auto-scanning');
+  chrome.runtime.sendMessage({
+    action: 'analyzeUrl',
+    url: window.location.href
+  });
 });
