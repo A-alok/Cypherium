@@ -177,7 +177,7 @@ const Dashboard = ({ user, onLogout }) => {
   if (loading) return <div className="loading">Loading security profile...</div>;
 
   return (
-    <div className="dashboard">
+    <div className="dashboard-layout">
       {/* Incident Guidance Modal */}
       {selectedIncident && (
         <div className="modal-overlay" onClick={() => setSelectedIncident(null)}>
@@ -191,7 +191,7 @@ const Dashboard = ({ user, onLogout }) => {
                 <p><strong>Detected:</strong> {selectedIncident.result?.prediction.toUpperCase()}</p>
                 <p><strong>Content:</strong> {selectedIncident.content}</p>
               </div>
-              <h3>Step-by-Step Guidance</h3>
+              <h3 style={{color: 'var(--text-dark)'}}>Step-by-Step Guidance</h3>
               <ul className="guidance-list">
                 {selectedIncident.result?.guidance?.length > 0 ? (
                   selectedIncident.result.guidance.map((step, i) => (
@@ -200,7 +200,7 @@ const Dashboard = ({ user, onLogout }) => {
                     </li>
                   ))
                 ) : (
-                  <li>No specific guidance available for this incident.</li>
+                  <li className="guidance-step">No specific guidance available for this incident.</li>
                 )}
               </ul>
             </div>
@@ -208,26 +208,47 @@ const Dashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      <header className="dashboard-header">
-        <h1>Safety Dashboard</h1>
-        <div className="user-info">
-          <span>Welcome, {user?.username}</span>
-          <button onClick={onLogout} className="logout-button">Logout</button>
+      {/* Top Navbar */}
+      <nav className="dash-nav glass-card">
+        <div className="logo-clean">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          Cypherium
         </div>
-      </header>
+        
+        <div className="user-profile">
+          <div className="profile-icon">
+            {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <button className="logout-text" onClick={onLogout}>Sign Out</button>
+        </div>
+      </nav>
 
-      <main className="dashboard-content">
-        <section className="score-section">
-          <h2>Your Digital Security Health</h2>
-          <div className="score-container">
-            <div className="score-chart">
-              <Bar data={scoreData} options={scoreOptions} />
+      <main className="dash-main">
+        <div className="dash-header">
+          <h2>Overview</h2>
+          <p className="dash-subtitle">Your digital security snapshot.</p>
+        </div>
+
+        <div className="dash-grid">
+          <section className="glass-card dash-card">
+            <h3>Security Health</h3>
+            <div className="chart-container" style={{ margin: '1rem 0' }}>
+              <div style={{ height: '220px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <Bar data={scoreData} options={{ ...scoreOptions, maintainAspectRatio: false }} />
+              </div>
             </div>
-            <div className="score-details">
-              <div className={`score-badge ${riskStatus}`}>
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <div className="result-tag" style={{
+                  display: 'inline-block', 
+                  fontSize: '1.25rem', padding: '0.5rem 1.5rem', marginBottom: '0.5rem',
+                  backgroundColor: riskStatus === 'red' ? 'rgba(239, 68, 68, 0.1)' : riskStatus === 'yellow' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                  color: riskStatus === 'red' ? 'var(--color-red)' : riskStatus === 'yellow' ? 'var(--color-amber)' : 'var(--color-emerald)'
+                }}>
                 {riskScore}/100 Risk
               </div>
-              <p className="score-description">
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
                 {riskStatus === 'red' 
                   ? 'High risk detected. Take immediate action to improve your security.' 
                   : riskStatus === 'yellow' 
@@ -235,65 +256,78 @@ const Dashboard = ({ user, onLogout }) => {
                   : 'Good security practices. Keep up the good work!'}
               </p>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="charts-section">
-          <div className="chart-container">
+          <section className="glass-card dash-card">
             <h3>Risk Factors Profile</h3>
-            <Doughnut data={riskData} />
-          </div>
-          <div className="chart-container">
+            <div className="chart-container">
+              <div style={{ height: '300px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <Doughnut data={riskData} options={{ maintainAspectRatio: false }} />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="dash-grid">
+          <section className="glass-card dash-card">
             <h3>Threat Distribution</h3>
-            <Doughnut data={platformData} />
-          </div>
-        </section>
+            <div className="chart-container">
+              <div style={{ height: '250px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <Doughnut data={platformData} options={{ maintainAspectRatio: false }} />
+              </div>
+            </div>
+          </section>
 
-        <section className="recommendations-section">
-          <h3>Personalized Security Strategy</h3>
-          <ul className="recommendations-list">
-            {recommendations.length > 0 ? recommendations.map((rec, index) => (
-              <li key={index} className="recommendation-item">{rec}</li>
-            )) : (
-              <li className="recommendation-item">No urgent actions required.</li>
-            )}
-          </ul>
-        </section>
-
-        <section className="history-section">
-          <h3>Recent Security Incident History</h3>
-          <table className="scan-history">
-            <thead>
-              <tr>
-                <th>Monitor</th>
-                <th>Content Detail</th>
-                <th>Risk Status</th>
-                <th>Detected At</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scanHistory.length > 0 ? scanHistory.map((scan) => (
-                <tr key={scan.id}>
-                  <td>{scan.scan_type.toUpperCase()}</td>
-                  <td className="content-detail">{scan.content}</td>
-                  <td className={scan.result?.prediction === 'safe' ? 'safe' : 'malicious'}>
-                    {scan.result?.prediction || 'Unknown'}
-                  </td>
-                  <td>{new Date(scan.timestamp).toLocaleString()}</td>
-                  <td>
-                    {scan.result?.prediction !== 'safe' && (
-                      <button className="guidance-btn" onClick={() => viewGuidance(scan)}>View Guidance</button>
-                    )}
-                  </td>
-                </tr>
+          <section className="glass-card dash-card">
+            <h3>Personalized Strategy</h3>
+            <ul className="recommendations-list">
+              {recommendations.length > 0 ? recommendations.map((rec, index) => (
+                <li key={index} className="recommendation-item">{rec}</li>
               )) : (
-                <tr>
-                  <td colSpan="5" style={{textAlign: 'center'}}>No scan history found.</td>
-                </tr>
+                <li className="recommendation-item">No urgent actions required.</li>
               )}
-            </tbody>
-          </table>
+            </ul>
+          </section>
+        </div>
+
+        <section className="glass-card dash-card">
+          <h3>Incident History</h3>
+          <div className="table-responsive">
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>Monitor</th>
+                  <th>Content Detail</th>
+                  <th>Risk Status</th>
+                  <th>Detected At</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scanHistory.length > 0 ? scanHistory.map((scan) => (
+                  <tr key={scan.id}>
+                    <td style={{ fontWeight: 500, color: 'var(--text-dark)' }}>{scan.scan_type.toUpperCase()}</td>
+                    <td className="content-cell">{scan.content}</td>
+                    <td>
+                      <span className={`result-tag ${scan.result?.prediction === 'safe' ? 'tag-safe' : 'tag-danger'}`}>
+                        {scan.result?.prediction || 'Unknown'}
+                      </span>
+                    </td>
+                    <td className="date-cell">{new Date(scan.timestamp).toLocaleString()}</td>
+                    <td>
+                      {scan.result?.prediction !== 'safe' && (
+                        <button className="guidance-btn" onClick={() => viewGuidance(scan)}>View Guidance</button>
+                      )}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="5" style={{textAlign: 'center', color: 'var(--text-secondary)' }}>No scan history found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
       </main>
     </div>

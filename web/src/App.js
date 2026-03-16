@@ -43,13 +43,34 @@ function App() {
 
   return (
     <div className="App">
-      {isLoggedIn ? (
-        <Dashboard user={user} onLogout={handleLogout} />
-      ) : showRegister ? (
-        <Register onRegister={handleLogin} onBackToLogin={toggleAuthMode} />
-      ) : (
-        <Login onLogin={handleLogin} onShowRegister={toggleAuthMode} />
-      )}
+      {/* Global Background Orbs & Particles */}
+      <div className="bg-particles">
+        <div className="orb orb-1"></div>
+        <div className="orb orb-2"></div>
+        <div className="orb orb-3"></div>
+        <div className="orb orb-4"></div>
+        <div className="orb orb-5"></div>
+        <div className="orb orb-6"></div>
+        <div className="orb orb-7"></div>
+        <div className="dots-container">
+          <div className="dot"></div>
+          <div className="dot"></div>
+          <div className="dot"></div>
+          <div className="dot"></div>
+          <div className="dot"></div>
+          <div className="dot"></div>
+          <div className="dot"></div>
+        </div>
+      </div>
+      <div style={{ position: 'relative', zIndex: 1, height: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {isLoggedIn ? (
+          <Dashboard user={user} onLogout={handleLogout} />
+        ) : showRegister ? (
+          <Register onRegister={handleLogin} onBackToLogin={toggleAuthMode} />
+        ) : (
+          <Login onLogin={handleLogin} onShowRegister={toggleAuthMode} />
+        )}
+      </div>
     </div>
   );
 }
