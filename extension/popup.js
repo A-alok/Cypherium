@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (isSafe) {
         statusDiv.innerHTML = `<span style="color: #4caf50">Page is safe!</span><br><small>Risk: ${data.risk_score || 0}</small>`;
-        statusDiv.className = 'status status-loading';
+        statusDiv.className = 'status status-success'; // Using generic safe status style
         if (feedbackSection) feedbackSection.style.display = 'none';
       } else {
         const repo = data.details?.reputation;
@@ -227,12 +227,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show feedback section
         if (feedbackSection) {
           feedbackSection.style.display = 'block';
-          currentScanId = data.scan_id;
+          currentScanId = data.scan_id || Math.floor(Math.random() * 10000);
         }
       }
     } catch (err) {
       statusDiv.textContent = 'Error: ' + err.message;
       statusDiv.className = 'status status-error';
+      console.error(err);
     }
   }
   
@@ -267,13 +268,37 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function submitFeedback(isCorrect, comment) {
-    console.log('Submitting feedback:', { scanId: currentScanId, isCorrect, comment });
-    if (statusDiv) {
-      statusDiv.textContent = 'Thank you for your feedback!';
-      statusDiv.className = 'status status-loading';
-    }
-    if (feedbackSection) feedbackSection.style.display = 'none';
-    const commentEl = document.getElementById('feedbackComment');
-    if (commentEl) commentEl.value = '';
+    fetch('http://localhost:8000/scan/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        scan_id: currentScanId ? currentScanId.toString() : "",
+        is_correct: isCorrect,
+        comment: comment
+      })
+    })
+    .then(response => {
+      // Show confirmation
+      if (statusDiv) {
+        statusDiv.textContent = 'Thank you for your feedback!';
+        statusDiv.className = 'status status-success';
+      }
+      
+      // Hide feedback section
+      if (feedbackSection) feedbackSection.style.display = 'none';
+      
+      // Clear form
+      const commentEl = document.getElementById('feedbackComment');
+      if (commentEl) commentEl.value = '';
+    })
+    .catch(error => {
+      console.error('Error submitting feedback:', error);
+      if (statusDiv) {
+        statusDiv.textContent = 'Error: Failed to submit feedback.';
+        statusDiv.className = 'status status-error';
+      }
+    });
   }
 });

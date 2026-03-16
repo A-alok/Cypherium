@@ -47,7 +47,6 @@ async def get_risk_score(token: Optional[str] = None):
         
         # 3. Return the risk score
         return RiskScore(**risk_data)
-        
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

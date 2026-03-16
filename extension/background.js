@@ -22,182 +22,88 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === 'analyzeUrl') {
     analyzeLink(request.url);
     sendResponse({status: 'analysis started'});
-  } else if (request.action === 'analyzeContent') {
-    analyzeTextContent(request.content, request.type);
-    sendResponse({status: 'content analysis started'});
-  } else if (request.action === 'saveAuth') {
-    chrome.storage.local.set({
-      token: request.token,
-      user: request.user
-    }, () => {
-      console.log('Auth data saved in extension');
-    });
-    sendResponse({status: 'auth saved'});
-  } else if (request.action === 'syncToken') {
-    chrome.storage.local.set({
-      token: request.token
-    }, () => {
-      console.log('Token synced from dashboard');
-    });
-    sendResponse({status: 'token synced'});
-  } else if (request.action === 'trackActivity') {
-    trackActivity(request.type, request.metadata);
-    sendResponse({status: 'activity tracking started'});
   }
   
   return true; // Keep message channel open for async response
 });
 
-async function trackActivity(type, metadata) {
-  try {
-    const token = await new Promise(resolve => {
-      chrome.storage.local.get(['token'], result => resolve(result.token));
-    });
-
-    if (!token) return;
-
-    const response = await fetch('http://localhost:8000/behavior/track', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        type: type,
-        metadata: metadata,
-        token: token
-      })
-    });
-
-    if (!response.ok) return;
-    
-    const result = await response.json();
-    if (result.is_anomaly) {
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon48.png',
-        title: 'Security Alert - Unusual Behavior',
-        message: result.reason,
-        priority: 2
-      });
-
-      // Also show banner on the page
-      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        if (tabs[0] && tabs[0].url && !tabs[0].url.startsWith('chrome://')) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            action: 'showWarning',
-            message: `Unusual Activity: ${result.reason}`
-          }, () => {
-            if (chrome.runtime.lastError) {
-              console.warn('Content script not ready for behavioral warning');
-            }
-          });
-        }
-      });
-    }
-  } catch (err) {
-    console.error('Activity tracking failed:', err);
-  }
-}
-
-async function analyzeTextContent(content, type) {
-  try {
-    const token = await new Promise(resolve => {
-      chrome.storage.local.get(['token'], result => resolve(result.token));
-    });
-
-    const response = await fetch('http://localhost:8000/scan/analyze', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        content: content,
-        scan_type: type || 'message',
-        token: token || null
-      })
-    });
-
-    if (!response.ok) return;
-    
-    const result = await response.json();
-    if (result.prediction === 'scam' || result.prediction === 'suspicious') {
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon48.png',
-        title: 'Safety Assistant - Alert',
-        message: `Caution: Detected a potential ${result.prediction} in your chat/email!`,
-        priority: 2
-      });
-    }
-  } catch (err) {
-    console.error('Content analysis failed:', err);
-  }
-}
-
-async function analyzeLink(url) {
+function analyzeLink(url) {
   console.log('Analyzing URL:', url);
   
-  try {
-    const token = await new Promise(resolve => {
-      chrome.storage.local.get(['token'], result => resolve(result.token));
-    });
-
-    const response = await fetch('http://localhost:8000/scan/analyze', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        content: url,
-        scan_type: 'url',
-        token: token || null
-      })
-    });
-
-    if (!response.ok) throw new Error('Backend error');
+  fetch('http://127.0.0.1:8000/scan/analyze', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      scan_type: 'url',
+      content: url
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    const isSafe = data.prediction === 'safe';
     
-    const result = await response.json();
-    const isSafe = result.prediction !== 'malicious' && result.prediction !== 'scam';
-    
-    // Show notification
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon48.png',
       title: 'Safety Assistant',
       message: isSafe 
-        ? `This link appears to be safe (Score: ${Math.round(100 - result.risk_score)})` 
-        : `Warning: This link is flagged as ${result.prediction.toUpperCase()}!`,
+        ? `This link appears to be safe: ${url}` 
+        : `Warning: This link may be ${data.prediction} (Confidence: ${(data.confidence*100).toFixed(0)}%): ${url}`,
       priority: 2
     });
     
-    // If unsafe, notify currently active tab
     if (!isSafe) {
-      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        if (tabs[0] && tabs[0].url && !tabs[0].url.startsWith('chrome://')) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            action: 'showWarning',
-            message: `Warning: A detected link is flagged as ${result.prediction.toUpperCase()}.`
-          }, () => {
-            if (chrome.runtime.lastError) {
-              console.warn('Content script not ready for link warning');
-            }
-          });
-        }
-      });
+      if (typeof sender !== 'undefined' && sender && sender.tab) {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: 'showWarning',
+          message: `A link on this page has been flagged as ${data.prediction}.`
+        });
+      }
     }
-  } catch (err) {
-    console.error('Analysis failed:', err);
-  }
+  })
+  .catch(error => {
+    console.error('Error analyzing URL:', error);
+  });
 }
 
 // Auto-scan URLs as they are visited
 chrome.webNavigation.onCompleted.addListener(function(details) {
   // Only scan main frame (not iframes)
   if (details.frameId === 0) {
-    // In a real implementation, you might check user settings
-    // to see if auto-scan is enabled
-    
-    // For demo purposes, we'll skip auto-scanning to avoid too many notifications
-    console.log('Visited URL:', details.url);
+    if (details.url.startsWith('http://') || details.url.startsWith('https://')) {
+      console.log('Safety Assistant: Auto-scanning visited URL:', details.url);
+      
+      fetch('http://127.0.0.1:8000/scan/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          scan_type: 'url',
+          content: details.url
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        const isSafe = data.prediction === 'safe';
+        if (!isSafe) {
+          chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'icons/icon48.png',
+            title: 'Safety Assistant Warning',
+            message: `Warning: This link may be ${data.prediction} (Confidence: ${(data.confidence*100).toFixed(0)}%): ${details.url}`,
+            priority: 2
+          });
+          
+          chrome.tabs.sendMessage(details.tabId, {
+            action: 'showWarning',
+            message: `This page has been flagged as ${data.prediction}.`
+          });
+        }
+      })
+      .catch(err => console.error('Error auto-scanning URL:', err));
+    }
   }
 });
